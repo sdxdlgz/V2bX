@@ -37,10 +37,17 @@ and state file. NoBrand-OneClick/Mita must not own that same listener.
 
 The adapter persists an agent UUID and cumulative counters in an atomic file.
 Do not delete this state or the paired panel accounting tables. An agent ID
-change is rejected to prevent accidental double billing. A directory lock
-prevents two adapters writing the same state; after an unclean process exit,
-verify the old process is gone before manually removing the stale `.lock`
-directory. Automatic crash recovery is not implemented.
+change is rejected to prevent accidental double billing. An exclusive OS file
+lock prevents two adapters writing the same state on Linux and Windows. It is
+released automatically when the process exits, including a forced kill, so the
+service manager can restart the adapter. Keep the `.lock` file in place; do not
+delete or replace it while an adapter is running. Other platforms fail closed.
+
+When upgrading the earlier trial, stop its adapter first. A leftover `.lock`
+directory is deliberately rejected; verify no old process is running before
+removing that empty directory. Never delete the state file. Rolling back to the
+directory-lock build similarly requires stopping the adapter before removing
+the new regular lock file. These steps apply only to the new Mieru adapter.
 
 Every sync reports durable counters before fetching authorized users. A sync
 failure stops the proxy, retaining pending counters for retries. Empty users

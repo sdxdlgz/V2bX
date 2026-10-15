@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/sdxdlgz/V2bX/experimental/mieru/agent"
+	"github.com/sdxdlgz/V2bX/experimental/mieru/internal/statelock"
 )
 
 func main() {
@@ -40,12 +41,11 @@ func run() error {
 	if err = os.MkdirAll(filepath.Dir(config.StateFile), 0700); err != nil {
 		return err
 	}
-	// A stale lock after a crash requires operator review; never run two writers.
-	lock := config.StateFile + ".lock"
-	if err = os.Mkdir(lock, 0700); err != nil {
-		return fmt.Errorf("state is locked; check for another or crashed adapter")
+	lock, err := statelock.Acquire(config.StateFile + ".lock")
+	if err != nil {
+		return err
 	}
-	defer os.Remove(lock)
+	defer lock.Close()
 	state, err := agent.LoadState(config.StateFile)
 	if err != nil {
 		return err
